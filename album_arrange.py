@@ -8,7 +8,7 @@ DB_FIELD_NAME_INDX = 'index'
 def main():
     arguments = argparse.ArgumentParser()
     arguments.add_argument('--import-path', '-i', required=True, help='local folder path for walking through to import')
-    arguments.add_argument('--work-path', '-w', default=os.path.expanduser('~/Pictures/AlbumArrange'), help='local folder path for moveing to')
+    arguments.add_argument('--work-path', '-w', default=os.path.expanduser('/Volumes/Remember/CameraRoll'), help='local folder path for moveing to')
     arguments.add_argument('--hash-size', '-s', default=1024*10, help='num of bytes for md5sum caculation')
     arguments.add_argument('--file-type', '-t', nargs='+', help='file extension types for keep-filter')
     arguments.add_argument('--project', '-p', required=True, help='album project name')
