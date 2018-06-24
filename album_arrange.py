@@ -27,7 +27,7 @@ class ArgumentOptions(object):
         self.project_name = data.project_name # type: str
         self.project_path = data.project_path # type: str
         self.command = data.command # type: str
-        self.move_asset = data.move_asset # type: bool
+        self.with_copy = data.with_copy # type: bool
 
 def import_assets(options:ArgumentOptions):
     pattern = re.compile(r'\.(JPG|MOV|MP4)$', re.IGNORECASE)
@@ -101,7 +101,7 @@ def import_assets(options:ArgumentOptions):
         dst_location = '%s/%s' % (dst_group_location, file_name)
         assert not os.path.exists(dst_location)
         hash_map[digest] = file_name
-        if options.move_asset:
+        if not options.with_copy:
             bash_script.write('mv -v \'%s\' \'%s\'\n' % (src_location, dst_location))
         else:
             bash_script.write('cp -v \'%s\' \'%s\'\n' % (src_location, dst_location))
@@ -162,7 +162,7 @@ def main():
     arguments.add_argument('--file-type', '-t', nargs='+', help='file extension types for keep-filter')
     arguments.add_argument('--project-name', '-n', help='album project name')
     arguments.add_argument('--project-path', '-p')
-    arguments.add_argument('--move-asset', '-m', action='store_false')
+    arguments.add_argument('--with-copy', action='store_true')
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
 
     if options.command == script_commands.import_assets:
