@@ -10,6 +10,7 @@ class script_commands(object):
     seperate_database = 'seperate-database'
     import_project    = 'import-project'
     import_assets     = 'import-assets'
+    rebuild_order     = 'rebuild-order'
 
     @classmethod
     def get_option_choices(cls):
@@ -28,6 +29,7 @@ class ArgumentOptions(object):
         self.project_path = data.project_path # type: str
         self.command = data.command # type: str
         self.with_copy = data.with_copy # type: bool
+        self.years = data.year # type:list[str]
 
 def import_assets(options:ArgumentOptions):
     pattern = re.compile(r'\.(JPG|MOV|MP4)$', re.IGNORECASE)
@@ -152,6 +154,20 @@ def write_database(data:dict, project_path:str):
 def import_project(options:ArgumentOptions):
     pass
 
+def rebuild_order(options:ArgumentOptions):
+    script = open(tempfile.mktemp('-rebuild_oder.sh'), 'w+')
+    script.write('#!/usr/bin/env bash\n')
+    for year in options.years:
+        mini_project_path = os.path.join(options.work_path, options.project_name, year)
+        if not os.path.exists(mini_project_path): continue
+        back_project_path = '{}_temp'.format(mini_project_path)
+        script.write('rm -fr {}\n'.format(back_project_path))
+        script.write('mv -fv "{}" "{}"\n'.format(mini_project_path, back_project_path))
+        script.write('python3 {} -n {} -i {}\n'.format(os.path.abspath(__file__), options.project_name, back_project_path))
+        script.write('rm -frv {}\n'.format(back_project_path))
+    script.write('rm -f {}\n'.format(script.name))
+    script.close()
+    assert os.system('bash -xe {}'.format(script.name)) == 0
 
 def main():
     arguments = argparse.ArgumentParser()
@@ -162,6 +178,7 @@ def main():
     arguments.add_argument('--file-type', '-t', nargs='+', help='file extension types for keep-filter')
     arguments.add_argument('--project-name', '-n', help='album project name')
     arguments.add_argument('--project-path', '-p')
+    arguments.add_argument('--year', '-y', nargs='+')
     arguments.add_argument('--with-copy', action='store_true')
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
 
@@ -178,6 +195,10 @@ def main():
         assert options.project_path and os.path.exists(options.project_path)
         assert options.project_name
         import_project(options)
+    elif options.command == script_commands.rebuild_order:
+        assert options.project_name
+        assert options.years
+        rebuild_order(options)
 
 if __name__ == '__main__':
     main()
