@@ -78,13 +78,13 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
     for target_location in asset_list:
         timestamp = os.stat(target_location).st_birthtime
         mtime = time.localtime(os.path.getmtime(target_location))
-        hash_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
+        unick_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
         md5 = hashlib.md5()
         with open(target_location, 'r+b') as fp:
             md5.update(fp.read(hash_size))
             digest = md5.hexdigest()
             fp.close()
-            if digest in hash_map or digest in accept_map:
+            if digest in unick_map or digest in accept_map:
                 print('[DUP] {} {}'.format(digest, target_location))
                 continue
             accept_map[digest] = target_location
@@ -103,6 +103,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         _, mtime, digest, src_location = increment_list[n]
         label = '%02d%02d' % (mtime.tm_year, mtime.tm_mon)
         index_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_INDEX)
+        unick_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
         if label not in index_map: index_map[label] = 1
         common_path = src_location[:-4]
         sequence = live_map.get(common_path)
@@ -116,7 +117,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
             os.makedirs(dst_group_location)
         dst_location = '%s/%s' % (dst_group_location, file_name)
         assert not os.path.exists(dst_location)
-        hash_map[digest] = file_name
+        unick_map[digest] = file_name
         if options.with_copy:
             shutil.copy(src_location, dst_location)
         else:
