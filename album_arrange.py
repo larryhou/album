@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse, os, sys, hashlib, re, time, json, tempfile
+import typing
 
 DATABASE_FIELD_NAME_INDEX = 'index'
 DATABASE_FIELD_NAME_HASH = 'hash'
@@ -21,6 +22,7 @@ class script_commands(object):
 
 class ArgumentOptions(object):
     def __init__(self, data):
+        if not data: return
         self.import_path = data.import_path # type: str
         self.work_path = data.work_path # type: str
         self.hash_size = data.hash_size # type: str
@@ -31,11 +33,23 @@ class ArgumentOptions(object):
         self.with_copy = data.with_copy # type: bool
         self.years = data.year # type:list[str]
 
-def import_assets(options:ArgumentOptions):
-    pattern = re.compile(r'\.(JPG|MOV|MP4)$', re.IGNORECASE)
-    if options.file_types:
-        pattern = re.compile(r'\.(%s)$' % ('|'.join(options.file_types)), re.IGNORECASE)
+    def clone(self):
+        result = ArgumentOptions(data=None)
+        for name, value in vars(self).items():
+            if name.startswith('__') or name.endswith('__'): continue
+            result.__setattr__(name, value)
+        return result
 
+def import_assets_from_external(options:ArgumentOptions):
+    asset_list = []
+    for walk_path, _, file_name_list in os.walk(options.import_path):
+        for file_name in file_name_list:
+            target_location = os.path.join(walk_path, file_name)
+            if not asset_pattern.search(file_name) or os.path.islink(target_location): continue
+            asset_list.append(target_location)
+    import_assets(options, asset_list)
+
+def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
     project_path = os.path.join(options.work_path, options.project_name)
     if not os.path.exists(project_path):
         os.makedirs(project_path)
@@ -60,20 +74,17 @@ def import_assets(options:ArgumentOptions):
     hash_size = int(options.hash_size)
     # generate incremental list
     increment_list = []
-    for walk_path, _, file_name_list in os.walk(options.import_path):
-        for file_name in file_name_list:
-            target_location = os.path.join(walk_path, file_name)
-            if not pattern.search(file_name) or os.path.islink(target_location): continue
-            timestamp = os.stat(target_location).st_birthtime
-            mtime = time.localtime(os.path.getmtime(target_location))
-            hash_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
-            with open(target_location, 'r+b') as fp:
-                md5.update(fp.read(hash_size))
-                digest = md5.hexdigest()
-                fp.close()
-                if digest in hash_map: continue
-                item = (timestamp, mtime, digest, target_location)
-                increment_list.append(item)
+    for target_location in asset_list:
+        timestamp = os.stat(target_location).st_birthtime
+        mtime = time.localtime(os.path.getmtime(target_location))
+        hash_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
+        with open(target_location, 'r+b') as fp:
+            md5.update(fp.read(hash_size))
+            digest = md5.hexdigest()
+            fp.close()
+            if digest in hash_map: continue
+            item = (timestamp, mtime, digest, target_location)
+            increment_list.append(item)
 
     def camera_roll_sort(a, b):
         if a[0] != b[0]: return 1 if a[0] > b[0] else -1
@@ -151,23 +162,46 @@ def write_database(data:dict, project_path:str):
         fp.close()
         print('database => {}'.format(database_path))
 
-def import_project(options:ArgumentOptions):
-    pass
+def import_assets_from_project(options:ArgumentOptions):
+    asset_list = []
+    for year in os.listdir(options.project_path):
+        if not re.match(r'^\d{4}$', year): continue
+        common_suffix_path = '{}/{}'.format(year, DATABASE_STORAGE_NAME)
+        src_database_path = '{}/{}'.format(options.project_path, common_suffix_path)
+        with open(src_database_path, 'r+') as fp:
+            src_database = json.load(fp) # type: dict[str,dict[str, str]]
+            fp.close()
+        src_hash_map = src_database.get(DATABASE_FIELD_NAME_HASH)
+        dst_database_path = '{}/{}/{}'.format(options.work_path, options.project_name, common_suffix_path)
+        if os.path.exists(dst_database_path):
+            with open(dst_database_path, 'r+') as fp:
+                dst_database = json.load(fp) # type: dict[str,dict[str, str]]
+                fp.close()
+            dst_hash_map = dst_database.get(DATABASE_FIELD_NAME_HASH)
+            if not dst_hash_map: dst_hash_map = {}
+            for hash, name in src_hash_map.items():
+                if hash not in dst_hash_map:
+                    asset_list.append(os.path.join(options.project_path, year, name))
+        else:
+            for hash, name in src_hash_map.items():
+                asset_list.append(os.path.join(options.project_path, year, name))
+    options.with_copy = True
+    import_assets(options, asset_list)
 
 def rebuild_order(options:ArgumentOptions):
-    script = open(tempfile.mktemp('-rebuild_oder.sh'), 'w+')
-    script.write('#!/usr/bin/env bash\n')
+    import shutil
     for year in options.years:
         mini_project_path = os.path.join(options.work_path, options.project_name, year)
         if not os.path.exists(mini_project_path): continue
-        back_project_path = '{}_temp'.format(mini_project_path)
-        script.write('rm -fr {}\n'.format(back_project_path))
-        script.write('mv -fv "{}" "{}"\n'.format(mini_project_path, back_project_path))
-        script.write('python3 {} -n {} -i {}\n'.format(os.path.abspath(__file__), options.project_name, back_project_path))
-        script.write('rm -frv {}\n'.format(back_project_path))
-    script.write('rm -f {}\n'.format(script.name))
-    script.close()
-    assert os.system('bash -xe {}'.format(script.name)) == 0
+        temp_project_path = '{}_temp'.format(mini_project_path)
+        if os.path.exists(temp_project_path):
+            shutil.rmtree(temp_project_path)
+        os.rename(mini_project_path, temp_project_path)
+        suboptions = options.clone()
+        suboptions.command = script_commands.import_assets
+        suboptions.import_path = temp_project_path
+        import_assets_from_external(suboptions)
+        shutil.rmtree(temp_project_path)
 
 def main():
     arguments = argparse.ArgumentParser()
@@ -182,19 +216,24 @@ def main():
     arguments.add_argument('--with-copy', action='store_true')
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
 
+    global asset_pattern
+    asset_pattern = re.compile(r'\.(JPG|MOV|MP4)$', re.IGNORECASE)
+    if options.file_types:
+        asset_pattern = re.compile(r'\.(%s)$' % ('|'.join(options.file_types)), re.IGNORECASE)
+
     if options.command == script_commands.import_assets:
         assert options.import_path and os.path.exists(options.import_path)
         assert options.work_path and os.path.exists(options.work_path)
         assert options.hash_size >= 1024
         assert options.project_name
-        import_assets(options)
+        import_assets_from_external(options)
     elif options.command == script_commands.seperate_database:
         assert options.project_path and os.path.exists(options.project_path)
         seperate_database(options)
     elif options.command == script_commands.import_project:
         assert options.project_path and os.path.exists(options.project_path)
         assert options.project_name
-        import_project(options)
+        import_assets_from_project(options)
     elif options.command == script_commands.rebuild_order:
         assert options.project_name
         assert options.years
