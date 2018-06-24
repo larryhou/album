@@ -101,7 +101,6 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         _, mtime, digest, src_location = increment_list[n]
         label = '%02d%02d' % (mtime.tm_year, mtime.tm_mon)
         index_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_INDEX)
-        print(index_map)
         if label not in index_map: index_map[label] = 1
         common_path = src_location[:-4]
         sequence = live_map.get(common_path)
