@@ -83,7 +83,9 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
             md5.update(fp.read(hash_size))
             digest = md5.hexdigest()
             fp.close()
-            if digest in hash_map: continue
+            if digest in hash_map:
+                print('[DUP] {} {}'.format(digest, target_location))
+                continue
             item = (timestamp, mtime, digest, target_location)
             increment_list.append(item)
 
