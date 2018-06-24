@@ -70,7 +70,6 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         database[name] = data
         return data
 
-    md5 = hashlib.md5()
     hash_size = int(options.hash_size)
     # generate incremental list
     increment_list = []
@@ -78,6 +77,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         timestamp = os.stat(target_location).st_birthtime
         mtime = time.localtime(os.path.getmtime(target_location))
         hash_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
+        md5 = hashlib.md5()
         with open(target_location, 'r+b') as fp:
             md5.update(fp.read(hash_size))
             digest = md5.hexdigest()
@@ -175,11 +175,15 @@ def import_assets_from_project(options:ArgumentOptions):
             for hash, name in src_hash_map.items():
                 if hash not in dst_hash_map:
                     asset_list.append(os.path.join(options.project_path, year, name))
+                else:
+                    print(os.path.join(options.project_path, year, name))
         else:
             for hash, name in src_hash_map.items():
                 asset_list.append(os.path.join(options.project_path, year, name))
     options.with_copy = True
-    import_assets(options, asset_list)
+    print(vars(options))
+    # print('\n'.join(asset_list))
+    # import_assets(options, asset_list)
 
 def rebuild_order(options:ArgumentOptions):
     for year in options.years:
