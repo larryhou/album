@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, os, sys, hashlib, re, time, json, tempfile
+import argparse, os, sys, hashlib, re, time, json, tempfile, shutil
 import typing
 
 DATABASE_FIELD_NAME_INDEX = 'index'
@@ -94,8 +94,6 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
     increment_list.sort(key=cmp_to_key(camera_roll_sort))
     # generate image move path
     live_map = {}
-    bash_script = open(tempfile.mktemp('-AlbumArrange.sh'), 'w+')
-    bash_script.write('#!/usr/bin/env bash\n')
     for n in range(len(increment_list)):
         _, mtime, digest, src_location = increment_list[n]
         label = '%02d%02d' % (mtime.tm_year, mtime.tm_mon)
@@ -115,15 +113,10 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         assert not os.path.exists(dst_location)
         hash_map[digest] = file_name
         if not options.with_copy:
-            bash_script.write('mv -v \'%s\' \'%s\'\n' % (src_location, dst_location))
+            shutil.move(src_location, dst_location)
         else:
-            bash_script.write('cp -v \'%s\' \'%s\'\n' % (src_location, dst_location))
+            shutil.copy(src_location, dst_location)
         print(digest, '%s => %s' % (src_location, dst_location))
-    bash_script.write('rm -f %s\n' % bash_script.name)
-    # bash_script.seek(0)
-    # print bash_script.read()
-    bash_script.close()
-    os.system('bash -e %s' % bash_script.name)
 
     for name, mini_database in database.items():
         write_database(mini_database, project_path=os.path.join(project_path, name))
@@ -189,7 +182,6 @@ def import_assets_from_project(options:ArgumentOptions):
     import_assets(options, asset_list)
 
 def rebuild_order(options:ArgumentOptions):
-    import shutil
     for year in options.years:
         mini_project_path = os.path.join(options.work_path, options.project_name, year)
         if not os.path.exists(mini_project_path): continue
