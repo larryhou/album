@@ -186,9 +186,9 @@ def import_assets_from_project(options:ArgumentOptions):
             for hash, name in src_hash_map.items():
                 asset_list.append(os.path.join(options.project_path, year, name))
     options.with_copy = True
-    print(vars(options))
+    # print(vars(options))
     # print('\n'.join(asset_list))
-    # import_assets(options, asset_list)
+    import_assets(options, asset_list)
 
 def rebuild_order(options:ArgumentOptions):
     for year in options.years:
