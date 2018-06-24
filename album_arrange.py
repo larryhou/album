@@ -45,6 +45,7 @@ def import_assets_from_external(options:ArgumentOptions):
     for walk_path, _, file_name_list in os.walk(options.import_path):
         for file_name in file_name_list:
             target_location = os.path.join(walk_path, file_name)
+            if file_name.startswith('.'): continue
             if not asset_pattern.search(file_name) or os.path.islink(target_location): continue
             asset_list.append(target_location)
     import_assets(options, asset_list)
@@ -73,7 +74,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
 
     hash_size = int(options.hash_size)
     # generate incremental list
-    increment_list = []
+    increment_list, accept_map = [], {}
     for target_location in asset_list:
         timestamp = os.stat(target_location).st_birthtime
         mtime = time.localtime(os.path.getmtime(target_location))
@@ -83,9 +84,10 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
             md5.update(fp.read(hash_size))
             digest = md5.hexdigest()
             fp.close()
-            if digest in hash_map:
+            if digest in hash_map or digest in accept_map:
                 print('[DUP] {} {}'.format(digest, target_location))
                 continue
+            accept_map[digest] = target_location
             item = (timestamp, mtime, digest, target_location)
             increment_list.append(item)
 
