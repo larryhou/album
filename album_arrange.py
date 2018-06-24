@@ -58,13 +58,14 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
     def get_database(name:str, reload_from_disk = False)->dict:
         if name in database and not reload_from_disk:
             return database[name]
-        database_path = os.path.join(project_path, name)
+        database_path = os.path.join(project_path, name, DATABASE_STORAGE_NAME)
         data = {}
         if os.path.exists(database_path):
             try:
                 with open(database_path, 'r+') as fp:
                     data = json.load(fp)
-            except _: pass
+                    fp.close()
+            except: pass
         for field_name in [DATABASE_FIELD_NAME_HASH, DATABASE_FIELD_NAME_INDEX]:
             if field_name not in data: data[field_name] = {}
         database[name] = data
@@ -98,6 +99,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         _, mtime, digest, src_location = increment_list[n]
         label = '%02d%02d' % (mtime.tm_year, mtime.tm_mon)
         index_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_INDEX)
+        print(index_map)
         if label not in index_map: index_map[label] = 1
         common_path = src_location[:-4]
         sequence = live_map.get(common_path)
