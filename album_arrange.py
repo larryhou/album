@@ -48,11 +48,10 @@ def import_assets(options:ArgumentOptions):
                 with open(database_path, 'r+') as fp:
                     data = json.load(fp)
             except _: pass
+        for field_name in [DATABASE_FIELD_NAME_HASH, DATABASE_FIELD_NAME_INDEX]:
+            if field_name not in data: data[field_name] = {}
         database[name] = data
         return data
-
-    for field_name in [DATABASE_FIELD_NAME_HASH, DATABASE_FIELD_NAME_INDEX]:
-        if field_name not in database: database[field_name] = {}
 
     md5 = hashlib.md5()
     hash_size = int(options.hash_size)
