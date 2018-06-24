@@ -112,10 +112,10 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         dst_location = '%s/%s' % (dst_group_location, file_name)
         assert not os.path.exists(dst_location)
         hash_map[digest] = file_name
-        if not options.with_copy:
-            shutil.move(src_location, dst_location)
-        else:
+        if options.with_copy:
             shutil.copy(src_location, dst_location)
+        else:
+            shutil.move(src_location, dst_location)
         print(digest, '%s => %s' % (src_location, dst_location))
 
     for name, mini_database in database.items():
