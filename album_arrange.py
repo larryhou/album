@@ -162,7 +162,6 @@ def main():
 
     if options.command == script_commands.import_assets:
         assert options.import_path and os.path.exists(options.import_path)
-        assert options.file_types
         assert options.work_path and os.path.exists(options.work_path)
         assert options.hash_size >= 1024
         assert options.project_name
