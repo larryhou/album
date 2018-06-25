@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, os, sys, hashlib, re, time, json, tempfile, shutil
+import argparse, os, sys, hashlib, re, time, json, shutil, io
 import typing
 
 DATABASE_FIELD_NAME_INDEX = 'index'
@@ -33,6 +33,7 @@ class ArgumentOptions(object):
         self.with_copy = data.with_copy # type: bool
         self.with_date = data.with_date # type: bool
         self.years = data.year # type:list[str]
+        self.repair = data.repair # type: bool
 
     def clone(self):
         result = ArgumentOptions(data=None)
@@ -40,6 +41,24 @@ class ArgumentOptions(object):
             if name.startswith('__') or name.endswith('__'): continue
             result.__setattr__(name, value)
         return result
+
+def repair_asset_times(asset_path:str):
+    assert os.path.exists(asset_path)
+    process = os.popen('exiftool -stay_open True -r -e -n -createdate {}'.format(asset_path))
+    buffer = io.StringIO(process.read())
+    process.close()
+    while True:
+        line = buffer.readline()  # type: str
+        if not line: break
+        if line.startswith('===='):
+            file_path = line[9:-1]
+            if not asset_pattern.search(file_path): continue
+            data_line = buffer.readline()  # type: str
+            if not data_line: continue
+            create_date = time.strptime(data_line[-20:-1], '%Y:%m:%d %H:%M:%S')
+            create_time = int(time.mktime(create_date))
+            os.utime(file_path, (create_time, create_time))
+            print('{} => {}'.format(file_path, time.strftime('%Y-%m-%dT%H:%M:%S', create_date)))
 
 def import_assets_from_external(options:ArgumentOptions):
     asset_list = []
@@ -49,6 +68,8 @@ def import_assets_from_external(options:ArgumentOptions):
             if file_name.startswith('.'): continue
             if not asset_pattern.search(file_name) or os.path.islink(target_location): continue
             asset_list.append(target_location)
+    if options.repair:
+        repair_asset_times(asset_path=options.import_path)
     import_assets(options, asset_list)
 
 def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
@@ -216,10 +237,11 @@ def main():
     arguments.add_argument('--hash-size', '-s', type=int, default=1024*10, help='num of bytes for md5sum caculation')
     arguments.add_argument('--file-type', '-t', nargs='+', help='file extension types for keep-filter')
     arguments.add_argument('--project-name', '-n', help='album project name')
-    arguments.add_argument('--project-path', '-p')
-    arguments.add_argument('--year', '-y', nargs='+')
-    arguments.add_argument('--with-copy', action='store_true')
-    arguments.add_argument('--with-date', action='store_true')
+    arguments.add_argument('--project-path', '-p', help='album project path')
+    arguments.add_argument('--year', '-y', nargs='+', help='year number from album project')
+    arguments.add_argument('--repair', '-r', action='store_true', help='restore modified time from exif create date')
+    arguments.add_argument('--with-copy', action='store_true', help='will copy asset file to destination instead of move when set')
+    arguments.add_argument('--with-date', action='store_true', help='will put assets into date[%%Y-%%m-%%d] folders when set')
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
 
     global asset_pattern
