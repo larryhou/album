@@ -31,6 +31,7 @@ class ArgumentOptions(object):
         self.project_path = data.project_path # type: str
         self.command = data.command # type: str
         self.with_copy = data.with_copy # type: bool
+        self.with_date = data.with_date # type: bool
         self.years = data.year # type:list[str]
 
     def clone(self):
@@ -113,6 +114,8 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
             index_map[label] += 1
         file_name = '%s_%04d%s' % (label, sequence, src_location[-4:])
         dst_group_location = '%s/%04d' % (project_path, mtime.tm_year)
+        if options.with_date:
+            dst_group_location = os.path.join(dst_group_location, time.strftime('%Y-%m-%d', mtime))
         if not os.path.exists(dst_group_location):
             os.makedirs(dst_group_location)
         dst_location = '%s/%s' % (dst_group_location, file_name)
@@ -216,6 +219,7 @@ def main():
     arguments.add_argument('--project-path', '-p')
     arguments.add_argument('--year', '-y', nargs='+')
     arguments.add_argument('--with-copy', action='store_true')
+    arguments.add_argument('--with-date', action='store_true')
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
 
     global asset_pattern
