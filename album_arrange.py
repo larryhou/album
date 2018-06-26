@@ -59,7 +59,6 @@ def repair_asset_times(asset_path:str):
             if not date_pattern.search(exif_info):
                 buffer.seek(position, os.SEEK_SET)
                 continue
-            print(file_path, exif_info)
             create_date = time.strptime(exif_info[-20:-1], '%Y:%m:%d %H:%M:%S')
             create_time = int(time.mktime(create_date))
             os.utime(file_path, (create_time, create_time))
