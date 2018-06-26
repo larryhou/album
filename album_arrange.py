@@ -49,13 +49,18 @@ def repair_asset_times(asset_path:str):
     process.close()
     while True:
         line = buffer.readline()  # type: str
+        date_pattern = re.compile(r'\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}$')
         if not line: break
         if line.startswith('===='):
             file_path = line[9:-1]
             if not asset_pattern.search(file_path): continue
-            data_line = buffer.readline()  # type: str
-            if not data_line: continue
-            create_date = time.strptime(data_line[-20:-1], '%Y:%m:%d %H:%M:%S')
+            position = buffer.tell()
+            exif_info = buffer.readline()  # type: str
+            if not date_pattern.search(exif_info):
+                buffer.seek(position, os.SEEK_SET)
+                continue
+            print(file_path, exif_info)
+            create_date = time.strptime(exif_info[-20:-1], '%Y:%m:%d %H:%M:%S')
             create_time = int(time.mktime(create_date))
             os.utime(file_path, (create_time, create_time))
             print('{} => {}'.format(file_path, time.strftime('%Y-%m-%dT%H:%M:%S', create_date)))
