@@ -249,7 +249,7 @@ def main():
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
 
     global asset_pattern
-    asset_pattern = re.compile(r'\.(JPG|MOV|MP4|CR2)$', re.IGNORECASE)
+    asset_pattern = re.compile(r'\.(JPG|MOV|MP4|CR2|HEIC)$', re.IGNORECASE)
     if options.file_types:
         asset_pattern = re.compile(r'\.(%s)$' % ('|'.join(options.file_types)), re.IGNORECASE)
 
