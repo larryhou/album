@@ -133,7 +133,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
     last_mon = 0
     for n in range(len(increment_list)):
         _, mtime, digest, src_location = increment_list[n]
-        if last_mon != 0 and last_mon != mtime.tm_mon:
+        if 0 < last_mon != mtime.tm_mon:
             last_mon = mtime.tm_mon
             flush_database()
         label = '%02d%02d' % (mtime.tm_year, mtime.tm_mon)
