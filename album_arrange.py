@@ -131,20 +131,21 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         index_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_INDEX)
         unick_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
         if label not in index_map: index_map[label] = 1
-        common_path = src_location[:-4]
-        sequence = live_map.get(common_path)
+        common_path = src_location[:src_location.rfind('.')]
+        sequence = live_map.get(common_path) # keep live video and foto have the same sequence
         if sequence is None:
             sequence = index_map.get(label)
             live_map[common_path] = sequence
             index_map[label] += 1
-        file_name = '%s_%04d%s' % (label, sequence, src_location[-4:])
+        extension = src_location[src_location.rfind('.')+1:]
+        file_name = '%s_%04d.%s' % (label, sequence, extension)
         dst_group_location = '%s/%04d' % (project_path, mtime.tm_year)
         if options.with_date:
             dst_group_location = os.path.join(dst_group_location, time.strftime('%Y-%m-%d', mtime))
         if not os.path.exists(dst_group_location):
             os.makedirs(dst_group_location)
         dst_location = '%s/%s' % (dst_group_location, file_name)
-        assert not os.path.exists(dst_location)
+        assert not os.path.exists(dst_location), dst_location
         unick_map[digest] = file_name
         if options.with_copy:
             shutil.copy(src_location, dst_location)
