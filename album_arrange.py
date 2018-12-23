@@ -121,24 +121,16 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         if a[0] != b[0]: return 1 if a[0] > b[0] else -1
         return 1 if a[-1] > b[-1] else -1
 
-    def flush_database():
-        for name, mini_database in database.items():
-            print(name, mini_database)
-            write_database(mini_database, project_path=os.path.join(project_path, name))
-
     from functools import cmp_to_key
     increment_list.sort(key=cmp_to_key(camera_roll_sort))
     # generate image move path
     live_map = {}
-    last_mon = 0
     for n in range(len(increment_list)):
         _, mtime, digest, src_location = increment_list[n]
-        if 0 < last_mon != mtime.tm_mon:
-            last_mon = mtime.tm_mon
-            flush_database()
         label = '%02d%02d' % (mtime.tm_year, mtime.tm_mon)
         index_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_INDEX)
         unick_map = get_database(name=str(mtime.tm_year)).get(DATABASE_FIELD_NAME_HASH)
+        # print(index_map)
         if label not in index_map: index_map[label] = 1
         common_path = src_location[:src_location.rfind('.')]
         sequence = live_map.get(common_path) # keep live video and foto have the same sequence
@@ -162,7 +154,8 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
             shutil.move(src_location, dst_location)
         print(digest, '%s => %s' % (src_location, dst_location))
 
-    flush_database()
+    for name, mini_database in database.items():
+        write_database(mini_database, project_path=os.path.join(project_path, name))
 
 def seperate_database(options:ArgumentOptions):
     database = json.load(open('{}/{}'.format(options.project_path, DATABASE_STORAGE_NAME), 'r+'))
