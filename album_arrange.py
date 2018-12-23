@@ -123,6 +123,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
 
     def flush_database():
         for name, mini_database in database.items():
+            print(name, mini_database)
             write_database(mini_database, project_path=os.path.join(project_path, name))
 
     from functools import cmp_to_key
@@ -153,7 +154,7 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         if not os.path.exists(dst_group_location):
             os.makedirs(dst_group_location)
         dst_location = '%s/%s' % (dst_group_location, file_name)
-        assert not os.path.exists(dst_location), dst_location
+        assert not os.path.exists(dst_location), '{} => {}'.format(src_location, dst_location)
         unick_map[digest] = file_name
         if options.with_copy:
             shutil.copy(src_location, dst_location)
