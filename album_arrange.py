@@ -133,11 +133,14 @@ def import_assets(options:ArgumentOptions, asset_list:typing.List[str]):
         # print(index_map)
         if label not in index_map: index_map[label] = 1
         common_path = src_location[:src_location.rfind('.')]
-        sequence = live_map.get(common_path) # keep live video and foto have the same sequence
-        if sequence is None:
+        sequence, reference_count = live_map.get(common_path) # keep live video and foto have the same sequence
+        if reference_count >= 2: sequence = 0
+        if not sequence:
             sequence = index_map.get(label)
-            live_map[common_path] = sequence
+            live_map[common_path] = sequence, 1
             index_map[label] += 1
+        else:
+            live_map[common_path] = sequence, reference_count + 1
         extension = src_location[src_location.rfind('.')+1:]
         file_name = '%s_%04d.%s' % (label, sequence, extension)
         dst_group_location = '%s/%04d' % (project_path, mtime.tm_year)
